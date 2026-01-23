@@ -1,0 +1,870 @@
+<!doctype html>
+<!-- 中：HTML5 文档声明，告诉浏览器按现代标准解析。
+EN: HTML5 doctype; tells the browser to use standards mode.
+FR: Déclaration HTML5 ; indique au navigateur d’utiliser le mode standard. -->
+
+<html lang="en">
+<!--中：页面语言设为英文（可影响读屏与拼写检查）。
+EN: Document language set to English (screen readers/spellcheck).
+FR: Langue du document en anglais (lecteurs d’écran/correction).-->
+
+
+<head>
+<!--中：头部元信息与样式。
+EN: Metadata and styles.
+FR: Métadonnées et styles.-->
+  <meta charset="utf-8"/>
+  <!--中：UTF-8 编码，支持多语言字符。
+  EN: UTF-8 encoding for multilingual text.
+  FR: Encodage UTF-8 pour le texte multilingue.-->
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <!--中：移动端自适应视口。
+  EN: Responsive viewport for mobile.
+  FR: Viewport réactif pour mobile.-->
+  <title>PV Router UI</title>
+  <!--中：浏览器标签标题。
+  EN: Page title shown in browser tab.
+  FR: Titre de l’onglet du navigateur.-->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!--中：引入 TailwindCSS CDN，便捷使用原子类样式。
+  EN: Load TailwindCSS via CDN for utility classes.
+  FR: Charge TailwindCSS via CDN pour des classes utilitaires.-->
+  <style>
+    .navbtn{padding:.5rem 1rem;border-radius:.75rem}
+    .card{border-radius:1rem;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  </style>
+  <!--中：定义两个简单的 CSS 辅助类 .navbtn、.card。
+  EN: Two helper CSS classes for buttons/cards.
+  FR: Deux classes CSS utilitaires pour boutons/cartes.-->
+</head>
+
+
+<body class="bg-gray-50 text-gray-900">
+<!--中：全局浅灰背景、深灰文字。
+EN: Global light-gray background, dark text.
+FR: Fond gris clair, texte gris foncé global.--> 
+  <header class="bg-white shadow-sm sticky top-0 z-10">
+  <!--中：固定在顶部的白色导航条，含产品名、导航项、状态与登出。
+  EN: Sticky white navbar with app name, nav items, status & logout.
+  FR: Barre de navigation blanche fixe avec nom, onglets, statut & déconnexion.-->
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+      <div class="font-semibold">🔆 PV Router</div>
+      <nav class="flex gap-2 text-sm">
+      <!--中：六个锚点链接，切换 hash 路由至各页面（dashboard/history/…）
+      EN: Six anchor links to hash routes for pages.
+      FR: Six liens d’ancrage vers les routes hash des pages.-->
+        <a href="#/dashboard" class="navbtn hover:bg-gray-100">Dashboard</a>
+        <a href="#/data" class="navbtn hover:bg-gray-100">Data</a>
+        <a href="#/optimiser" class="navbtn hover:bg-gray-100">Optimiser</a>
+        <a href="#/history" class="navbtn hover:bg-gray-100">History</a>
+        <a href="#/boost" class="navbtn hover:bg-gray-100">Boost</a>
+        <a href="#/settings" class="navbtn hover:bg-gray-100">Settings</a>
+        <a href="#/mqtt" class="navbtn hover:bg-gray-100">MQTT</a>
+       <a id="navDev" href="#/dev" class="navbtn hover:bg-gray-100">Dev</a>
+          <a href="#/client" class="navbtn hover:bg-gray-100">Client</a>
+      </nav>
+      <div class="ml-auto flex items-center gap-3 text-sm">
+        <span id="statusText" class="text-gray-500"></span>
+        <!--中：显示当前页面名（由脚本更新）。
+        EN: Shows current page name (updated by JS).
+        FR: Affiche la page courante (mis à jour par JS).-->
+        <button id="logoutBtn" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">Logout</button>
+        <!--中：清除会话并跳转登录。
+        EN: Clears session and goes to login.
+        FR: Efface la session et retourne à la connexion.-->     
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto p-4">
+  <!--中：中心宽度限制，内边距布局容器。
+  EN: Centered max width container.
+  FR: Conteneur centré à largeur max.-->
+    <!-- Login -->
+    <section id="page-login" class="hidden">
+      <!--中：登录表单（路由器ID、密码、语言）与“Sign in”按钮，默认隐藏。
+      EN: Login form (router ID, password, language), hidden by default.
+      FR: Formulaire de connexion (ID routeur, mot de passe, langue), caché par défaut.-->
+      <div class="max-w-md mx-auto bg-white p-6 card">
+        <h2 class="text-lg font-semibold mb-4" id="tLoginTitle">Login</h2>
+        <div class="space-y-3">
+          <label class="block text-sm"><span id="lblRouterId">Router ID</span>
+            <input id="fRouter" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="PVROUTER001 / DEVACCOUNT"/>
+            <!--中：路由器ID或开发账号输入。
+            EN: Router ID or developer account input.
+            FR: Saisie ID du routeur ou compte dev.-->
+          </label>
+          <label class="block text-sm"><span id="lblPassword">Password</span>
+            <input id="fPass" type="password" class="mt-1 w-full border rounded-lg px-3 py-2"/>
+            <!--中：密码输入。
+            EN: Password input.
+            FR: Saisie du mot de passe.-->
+          </label>
+          <label class="block text-sm"><span id="lblLanguage">Language</span>
+            <select id="fLang" class="mt-1 w-full border rounded-lg px-3 py-2">
+            <!--中：界面语言选择（en/fr/zh）。
+            EN: UI language select.
+            FR: Sélecteur de langue UI.-->
+              <option value="en">English</option>
+              <option value="fr">Français</option>
+              <option value="zh">中文</option>
+            </select>
+          </label>
+          <button id="loginBtn" class="w-full py-2 rounded-lg bg-gray-900 text-white hover:opacity-90">Sign in</button>
+          <!--中：触发登录请求。
+          EN: Triggers login request.
+          FR: Déclenche la connexion.-->
+          <p id="loginErr" class="text-sm text-red-600"></p>
+          <!--中：显示登录失败信息。
+          EN: Shows login error.
+          FR: Affiche l’erreur de connexion.-->
+        </div>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="page-dashboard" class="hidden space-y-4">
+    <!--中：四张卡片显示 Grid/Solar/TEMP1/MODEINFO；下方“Prediction”块显示预测与刷新时间。
+    EN: Four stat cards + “Prediction” with refresh time.
+    FR: Quatre cartes + “Prediction” avec heure de mise à jour.-->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white p-5 card"><div class="text-sm text-gray-500" id="tGridW">Grid (W)</div><div id="grid_w" class="text-3xl font-bold">--</div></div>
+        <div class="bg-white p-5 card"><div class="text-sm text-gray-500" id="tSolarW">Solar (W)</div><div id="solar_w" class="text-3xl font-bold">--</div></div>
+        <div class="bg-white p-5 card"><div class="text-sm text-gray-500" id="tTempC">TEMP1 (°C)</div><div id="temp_c" class="text-3xl font-bold">--</div></div>
+        <div class="bg-white p-5 card"><div class="text-sm text-gray-500" id="tModeInfo">MODEINFO</div><div id="modeinfo" class="text-3xl font-bold">--</div></div>
+       <button id="openOptimiserUiBtn" class="px-3 py-1.5 rounded-lg bg-green-600 text-white">
+  Open Optimiser UI
+</button>
+
+        <!--	中：等待脚本填入实时数值。
+      EN: Placeholders pending JS fill.
+      FR: Espaces réservés remplis par JS-->
+      </div>
+
+      <div class="bg-white p-5 card">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold" id="tPrediction">Prediction</h3>
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-500"><span id="tUpdatedLabel">Updated:</span> <span id="updatedAt">--</span></span>
+            <button id="refreshBtn" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">Refresh</button>
+          </div>
+        </div>
+        <div id="predictBox" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div><div class="text-gray-500" id="lblNextShower">Next shower</div><div id="pred_shower" class="font-medium">--</div></div>
+          <div><div class="text-gray-500" id="lblExpectedTemp">Expected temp</div><div id="pred_temp" class="font-medium">--</div></div>
+          <div><div class="text-gray-500">Solar enough?</div><div id="pred_ok" class="font-medium">--</div></div>
+          <div><div class="text-gray-500">Extra kWh</div><div id="pred_kwh" class="font-medium">--</div></div>
+          <div><div class="text-gray-500">Est. cost</div><div id="pred_cost" class="font-medium">--</div></div>
+          <div><div class="text-gray-500" id="lblSuggestedSchedule">Suggested schedule</div><div id="pred_sched" class="font-medium">--</div></div>
+        </div>
+      </div>
+
+    </section>
+<section id="page-optimiser" class="hidden">
+  <div class="bg-white card overflow-hidden" style="height: calc(100vh - 110px);">
+    <iframe id="optimiserFrame" style="width:100%;height:100%;border:0;"></iframe>
+  </div>
+</section>
+
+    <!-- History -->
+    <section id="page-history" class="hidden space-y-4">
+      <div class="bg-white p-5 card">
+        <div class="flex items-center gap-2 text-sm">
+          <select id="histMetric" class="border rounded-lg px-2 py-1">
+            <option value="SAVED_Cost">SAVED_Cost</option>
+            <option value="TOTAL_PROD">TOTAL_PROD</option>
+            <option value="INJECT">INJECT</option>
+          </select>
+          <select id="histRange" class="border rounded-lg px-2 py-1">
+            <option value="7d">7d</option><option value="30d">30d</option>
+          </select>
+          <button id="histLoad" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">Load</button>
+          <a id="csvLink" class="ml-auto underline" href="/api/history/export.csv?range=30d">Export CSV</a>
+        </div>
+        <div class="mt-4">
+          <pre id="histData" class="text-xs text-gray-700 whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Boost -->
+    <section id="page-boost" class="hidden">
+      <div class="bg-white p-5 card space-y-4 max-w-xl">
+        <div class="text-sm">Status: <span id="boostStatus" class="font-medium">--</span></div>
+        <div class="flex gap-2">
+          <button id="boostOn" class="px-3 py-1.5 rounded-lg bg-green-600 text-white hover:opacity-90">Boost ON</button>
+          <button id="boostOff" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">Cancel</button>
+        </div>
+      </div>
+    </section>
+<section id="page-data" class="hidden">
+  <div class="bg-white card overflow-hidden" style="height: calc(100vh - 110px);">
+    <iframe id="dataFrame" style="width:100%;height:100%;border:0;"></iframe>
+  </div>
+</section>
+
+    <!-- Settings -->
+    <section id="page-settings" class="hidden">
+      <div class="bg-white p-5 card space-y-3 max-w-xl">
+        <h3 class="font-semibold">User Settings</h3>
+        <label class="block text-sm">Typical shower time
+          <input id="s_typical" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="07:30">
+        </label>
+        <label class="block text-sm">Next shower (override once)
+          <input id="s_next" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="07:30">
+        </label>
+        <label class="block text-sm">Desired temp (next)
+          <input id="s_temp" type="number" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="50">
+        </label>
+        <label class="block text-sm">Guests expected
+          <input id="s_guests" type="number" class="mt-1 w-full border rounded-lg px-3 py-2" value="0">
+        </label>
+        <label class="block text-sm">Page refresh interval (s)
+          <input id="s_refresh" type="number" class="mt-1 w-full border rounded-lg px-3 py-2" value="5">
+        </label>
+        <div class="flex gap-2">
+          <button id="s_save" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">Save</button>
+          <span id="s_msg" class="text-sm text-green-700"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- MQTT -->
+    <section id="page-mqtt" class="hidden">
+      <div class="bg-white p-5 card space-y-2 max-w-xl text-sm">
+        <div>Broker: <span id="mq_host" class="font-medium">-</span></div>
+        <div>Port: <span id="mq_port" class="font-medium">-</span></div>
+        <div>Connected: <span id="mq_conn" class="font-medium">-</span></div>
+        <div>Last sync: <span id="mq_sync" class="font-medium">-</span></div>
+        <div>Publish Hz: <span id="mq_hz" class="font-medium">-</span></div>
+        <div>Sub topic: <span id="mq_topic" class="font-medium">-</span></div>
+      </div>
+    </section>
+
+    <!-- Dev -->
+    <section id="page-dev" class="hidden">
+  <div class="bg-white p-5 card space-y-5 max-w-3xl">
+    <h3 class="font-semibold">Developer</h3>
+
+    <!-- Create new user -->
+    <div class="border rounded-xl p-4 space-y-3">
+      <div class="text-sm text-gray-600">Create a new router account (dev only)</div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+        <label class="block">Router ID
+          <input id="dev_new_id" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="PVROUTER002">
+        </label>
+
+        <label class="block">Password
+          <input id="dev_new_pass" type="password" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="abc123XYZ!">
+        </label>
+
+        <label class="block">Role
+          <select id="dev_new_role" class="mt-1 w-full border rounded-lg px-3 py-2">
+            <option value="user" selected>user</option>
+            <option value="dev">dev</option>
+          </select>
+        </label>
+
+        <label class="block">Router base (optional)
+          <input id="dev_new_base" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="http://192.168.1.112">
+        </label>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button id="devCreateBtn" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">
+          Create user
+        </button>
+        <span id="devCreateMsg" class="text-sm"></span>
+      </div>
+    </div>
+
+    <!-- List routers -->
+    <div class="space-y-3">
+      <div class="text-sm text-gray-600">List routers (dev only):</div>
+      <button id="devList" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">Load Routers</button>
+      <pre id="devOut" class="text-xs mt-2 whitespace-pre-wrap"></pre>
+    </div>
+  </div>
+</section>
+
+    <!-- Client -->
+    <section id="page-client" class="hidden space-y-4">
+      <!-- 位置模块 -->
+      <div class="bg-white p-5 card space-y-3 max-w-2xl">
+        <h3 class="font-semibold">Client – Position</h3>
+
+        <!-- 城市下拉：里尔 / 加来 / 敦刻尔克 -->
+        <label class="block text-sm">City (optional)
+          <select id="c_city" class="mt-1 w-full border rounded-lg px-3 py-2">
+            <option value="">-- Manual / Other --</option>
+            <option value="lille">Lille</option>
+            <option value="calais">Calais</option>
+            <option value="dunkerque">Dunkerque</option>
+          </select>
+        </label>
+
+        <!-- 经度 / 纬度 / 海拔 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <label class="block text-sm">Latitude
+            <input id="c_lat" type="number" step="0.000001"
+                   class="mt-1 w-full border rounded-lg px-3 py-2"
+                   placeholder="e.g. 50.62925">
+          </label>
+          <label class="block text-sm">Longitude
+            <input id="c_lon" type="number" step="0.000001"
+                   class="mt-1 w-full border rounded-lg px-3 py-2"
+                   placeholder="e.g. 3.057256">
+          </label>
+          <label class="block text-sm">Altitude (m)
+            <input id="c_alt" type="number" step="1"
+                   class="mt-1 w-full border rounded-lg px-3 py-2"
+                   placeholder="e.g. 25">
+          </label>
+        </div>
+
+
+      <!-- 光伏参数模块 -->
+      <div class="bg-white p-5 card space-y-3 max-w-2xl">
+        <h3 class="font-semibold">Client – PV parameters</h3>
+
+        <!-- 两种模式：知道所有技术细节 / 只知道简化参数 -->
+        <div class="flex flex-col md:flex-row gap-4 text-sm">
+          <label class="inline-flex items-center gap-2">
+            <input type="radio" name="pv_mode" value="full" checked>
+            <span>I know all technical details</span>
+          </label>
+          <label class="inline-flex items-center gap-2">
+            <input type="radio" name="pv_mode" value="simple">
+            <span>I don't know all details (simple mode)</span>
+          </label>
+        </div>
+
+        <!-- 模式 1：全部技术细节 -->
+        <div id="pv_full_box" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <label class="block">Azimuth du panneau
+            <input id="pv_azimuth_full" type="number"
+                   class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="180">
+          </label>
+          <label class="block">Inclinaison / Tilt (°)
+            <input id="pv_tilt_full" type="number"
+                   class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="25">
+          </label>
+          <label class="block">Surface du panneau (m²)
+            <input id="pv_surface_full" type="number" step="0.1"
+                   class="mt-1 w-full border rounded-lg px-3 py-2">
+          </label>
+          <label class="block">Puissance nominale du panneau (Wc)
+            <input id="pv_pnom" type="number"
+                   class="mt-1 w-full border rounded-lg px-3 py-2">
+          </label>
+          <label class="block">Plafond de puissance de l’onduleur (W)
+            <input id="pv_inverter_ceiling" type="number"
+                   class="mt-1 w-full border rounded-lg px-3 py-2">
+          </label>
+          <label class="block">Efficacité nominale de l’onduleur
+            <input id="pv_inverter_eff" type="number" step="0.01"
+                   class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="0.97">
+          </label>
+          <label class="block">Pertes dans les câbles (%)
+            <input id="pv_cable_losses" type="number" step="0.1"
+                   class="mt-1 w-full border rounded-lg px-3 py-2">
+          </label>
+        </div>
+
+        <!-- 模式 2：简化参数 + 整体效率 -->
+        <div id="pv_simple_box" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm hidden">
+          <label class="block">Azimuth du panneau
+            <input id="pv_azimuth_simple" type="number"
+                   class="mt-1 w-full border rounded-lg px-3 py-2">
+          </label>
+          <label class="block">Inclinaison / Tilt (°)
+            <input id="pv_tilt_simple" type="number"
+                   class="mt-1 w-full border rounded-lg px-3 py-2">
+          </label>
+          <label class="block">Surface du panneau (m²)
+            <input id="pv_surface_simple" type="number" step="0.1"
+                   class="mt-1 w-full border rounded-lg px-3 py-2">
+          </label>
+          <label class="block">Rendement global de l’installation
+            <input id="pv_global_eff" type="number" step="0.01"
+                   class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="0.8">
+          </label>
+          <label class="inline-flex items-center gap-2 mt-2">
+            <input id="pv_auto_adjust" type="checkbox" checked>
+            <span>Use auto_adjusting_params (recommended)</span>
+          </label>
+        </div>
+
+        <!-- 保存按钮 -->
+        <div class="flex items-center gap-3 mt-2">
+          <button id="c_save"
+                  class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">
+            Save client
+          </button>
+          <span id="c_msg" class="text-sm text-green-700"></span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // ======== Session & API helper =========
+document.querySelector('#openOptimiserUiBtn').onclick = ()=>{
+  location.hash = '#/optimiser';
+};
+
+
+  
+   async function apicall(path, opts={}){
+  opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
+  opts.credentials = 'include'; // ✅ 关键：让浏览器带上 cookie
+
+  const r = await fetch(path, opts);
+  if (r.status === 401) { location.hash = '#/login'; throw new Error('Unauthorized'); }
+  if (!r.ok) throw new Error(await r.text());
+  const ct = r.headers.get('content-type')||'';
+  return ct.includes('application/json') ? r.json() : r.text();
+}
+
+async function openOptimiserUI(){
+  const j = await apicall('/api/optimiser_ui/start', {method:'POST'});
+  document.getElementById('optimiserFrame').src = j.url;
+}
+
+window.addEventListener('hashchange', ()=>{
+  const page = location.hash.replace('#/','');
+  if (page==='optimiser') openOptimiserUI();
+  // 你原来的 dashboard/history/boost/settings... 保留
+});
+
+
+    // ======== Router (very simple) =========
+  const pages = ['login','dashboard','history','boost','settings','mqtt','dev','client','data','optimiser'];
+    function show(page){
+      pages.forEach(p=>document.getElementById('page-'+p).classList.add('hidden'));
+      document.getElementById('page-'+page).classList.remove('hidden');
+      document.getElementById('statusText').textContent = page;
+    }
+   let ME = null; // 缓存当前用户信息 {router_id, role, lang}
+
+function updateDevNavVisibility(){
+  const devLink = document.getElementById('navDev');
+  if (!devLink) return;
+  const isDev = (ME && ME.role === 'dev');
+  devLink.style.display = isDev ? '' : 'none';
+}
+
+async function ensureMe(){
+  if (ME) return ME;
+  // apicall 内部遇到 401 会自动跳转到 #/login 并 throw Error('Unauthorized')
+  const j = await apicall('/api/auth/me');
+  ME = j;
+  // apply UI language from session (FR => full French UI)
+  applyLang((j && j.lang) ? j.lang : (localStorage.getItem('ui_lang') || 'en'));
+  updateDevNavVisibility();
+  return ME;
+}
+
+async function guard(){
+  const hash = location.hash || '#/login';
+  const path = hash.replace('#/','');
+
+  // login 页：不需要 me
+  if (path === 'login'){
+    ME = null;
+    updateDevNavVisibility(); // 退出时隐藏 Dev
+    applyLang(localStorage.getItem('ui_lang') || document.getElementById('fLang')?.value || 'en');
+    show('login');
+    return;
+  }
+
+  // 其他页面：必须已登录
+  try{
+    await ensureMe();
+  }catch(e){
+    // apicall 已经把 hash 改成 #/login 了，这里直接 return
+    return;
+  }
+
+  // 非 dev 禁止进入 dev 页
+  if (path === 'dev' && (!ME || ME.role !== 'dev')){
+    location.hash = '#/dashboard';
+    return;
+  }
+
+  // path 不在 pages 列表时，回 dashboard
+  if (!pages.includes(path)){
+    location.hash = '#/dashboard';
+    return;
+  }
+
+  show(path);
+if (path === 'data') openDataUI();
+if (path === 'optimiser') openOptimiserUI();
+
+}
+
+window.addEventListener('hashchange', ()=>{ guard(); });
+async function openDataUI(){
+  const j = await apicall('/api/data_ui/start', {method:'POST'});
+  // iframe 指向 streamlit
+  document.getElementById('dataFrame').src = j.url;
+}
+
+
+    // ======== Login =========
+    document.getElementById('loginBtn').onclick = async ()=>{
+      const router_id = document.getElementById('fRouter').value.trim();
+      const password  = document.getElementById('fPass').value;
+      const lang      = document.getElementById('fLang').value;
+      try{
+        await apicall('/api/auth/login',{method:'POST',body:JSON.stringify({router_id,password,lang})});
+        applyLang(lang);
+        ME = null;               // 让 guard 重新获取 role
+        location.hash = '#/dashboard';
+      }
+      catch(e){
+        const lang = localStorage.getItem('ui_lang') || document.getElementById('fLang')?.value || 'en';
+        const msg = e.message || (lang==='fr' ? 'Échec de la connexion' : 'Login failed');
+        document.getElementById('loginErr').textContent = msg;
+      }
+    };
+  document.getElementById('logoutBtn').onclick = async ()=>{
+  try{ await apicall('/api/auth/logout',{method:'POST'}); }catch(e){}
+  ME = null;
+  updateDevNavVisibility();
+  location.hash = '#/login';
+};
+
+
+    // ======== Dashboard =========
+    async function loadStatus(){
+      const j = await apicall('/api/status');
+      q('#grid_w').textContent = n(j.grid_w);
+      q('#solar_w').textContent = n(j.solar_w);
+      q('#temp_c').textContent = n(j.temp_c);
+      q('#modeinfo').textContent = j.modeinfo ?? '--';
+      q('#updatedAt').textContent = new Date((j.updated_at||Date.now())*1000).toLocaleString();
+      const p = j.predict || {};
+      q('#pred_shower').textContent = p.next_shower ?? '--';
+      q('#pred_temp').textContent = n(p.expected_temp);
+      q('#pred_ok').textContent = p.solar_enough ? 'YES' : 'NO';
+      q('#pred_kwh').textContent = n(p.extra_kwh_needed);
+      q('#pred_cost').textContent = n(p.estimated_cost);
+      q('#pred_sched').textContent = (p.suggested_schedule||[]).join(', ');
+    }
+    q('#refreshBtn').onclick = loadStatus;
+
+    apicall('/api/optimiser_ui/start', {method:'POST'}).catch(()=>{});
+    apicall('/api/data_ui/start', {method:'POST'}).catch(()=>{});
+
+
+    // ======== History =========
+   q('#histLoad').onclick = async ()=>{
+  const m = q('#histMetric').value, r = q('#histRange').value;
+
+  const url = `/api/history?metric=${encodeURIComponent(m)}&range=${encodeURIComponent(r)}`;
+  console.log('[HISTORY] url =', url);
+
+  const j = await apicall(url);
+  q('#histData').textContent = JSON.stringify(j.series, null, 2);
+  q('#csvLink').href = `/api/history/export.csv?range=${encodeURIComponent(r)}`;
+};
+
+
+    // ======== Boost =========
+    async function refreshBoost(){
+      const j = await apicall('/api/boost'); q('#boostStatus').textContent = j.active ? 'ACTIVE' : 'INACTIVE';
+    }
+    q('#boostOn').onclick  = async()=>{ await apicall('/api/boost',{method:'POST',body:JSON.stringify({on:true})});  refreshBoost(); };
+    q('#boostOff').onclick = async()=>{ await apicall('/api/boost',{method:'DELETE'}); refreshBoost(); };
+
+    // ======== Settings =========
+    async function loadSettings(){
+      const s = await apicall('/api/settings');
+      q('#s_typical').value = s.typical_shower_time || '';
+      q('#s_next').value    = s.next_shower_time || '';
+      q('#s_temp').value    = s.desired_temp_next ?? 50;
+      q('#s_guests').value  = s.guests_expected ?? 0;
+      q('#s_refresh').value = s.page_refresh_interval ?? 5;
+    }
+    q('#s_save').onclick = async ()=>{
+      const b = {
+        typical_shower_time: q('#s_typical').value.trim(),
+        next_shower_time: q('#s_next').value.trim(),
+        desired_temp_next: parseFloat(q('#s_temp').value),
+        guests_expected: parseInt(q('#s_guests').value||'0'),
+        page_refresh_interval: parseInt(q('#s_refresh').value||'5'),
+      };
+      await apicall('/api/settings',{method:'POST',body:JSON.stringify(b)});
+      q('#s_msg').textContent = 'Saved!';
+      setTimeout(()=>q('#s_msg').textContent='', 1500);
+    };
+
+    // ======== MQTT =========
+    async function loadMQTT(){
+      const j = await apicall('/api/mqtt/status');
+      q('#mq_host').textContent = j.broker; q('#mq_port').textContent = j.port;
+      q('#mq_conn').textContent = j.connected ? 'Yes' : 'No';
+      q('#mq_sync').textContent = j.last_sync || '-';
+      q('#mq_hz').textContent   = j.publish_hz || '-';
+      q('#mq_topic').textContent= j.sub_topic || '-';
+    }
+
+    // ======== Dev =========
+    q('#devList').onclick = async ()=>{
+      try{ const j = await apicall('/api/dev/routers'); q('#devOut').textContent = JSON.stringify(j, null, 2); }
+      catch(e){ q('#devOut').textContent = e.message; }
+    };
+    // Create user (dev)
+const devCreateBtn = document.getElementById('devCreateBtn');
+if (devCreateBtn){
+  devCreateBtn.onclick = async ()=>{
+    const msg = document.getElementById('devCreateMsg');
+    msg.textContent = '';
+    msg.className = 'text-sm';
+
+    const router_id = (document.getElementById('dev_new_id').value || '').trim();
+    const password  = (document.getElementById('dev_new_pass').value || '');
+    const role      = (document.getElementById('dev_new_role').value || 'user');
+    const router_base = (document.getElementById('dev_new_base').value || '').trim() || null;
+
+    if (!router_id || !password){
+      msg.className = 'text-sm text-red-700';
+      msg.textContent = 'Router ID and Password are required.';
+      return;
+    }
+
+    try{
+      const payload = { router_id, password, role, router_base };
+      const j = await apicall('/api/dev/create_user', { method:'POST', body: JSON.stringify(payload) });
+      msg.className = 'text-sm text-green-700';
+      msg.textContent = `Created: ${j.router_id}`;
+      // 可选：创建成功后自动刷新 routers 列表
+      try{ q('#devList').click(); }catch(e){}
+    }catch(e){
+      msg.className = 'text-sm text-red-700';
+      msg.textContent = e.message || 'Create failed';
+    }
+  };
+}
+
+
+    // ======== Utilities =========
+    function q(s){ return document.querySelector(s); }
+    function n(v){ return (v===0||v) ? String(v) : '--'; }
+
+    // ======== i18n (FR full UI) =========
+    const I18N = {
+      fr: {
+        // top nav
+        navDashboard: "Tableau de bord",
+        navData: "Données",
+        navOptimiser: "Optimiseur",
+        navHistory: "Historique",
+        navBoost: "Boost",
+        navSettings: "Paramètres",
+        navMQTT: "MQTT",
+        navClient: "Client",
+        navDev: "Dev",
+        // header / session
+        logoutBtn: "Se déconnecter",
+        statusText: "Connecté",
+        // login
+        tLoginTitle: "Connexion",
+        lblRouterId: "ID du routeur",
+        lblPassword: "Mot de passe",
+        lblLanguage: "Langue",
+        loginBtn: "Se connecter",
+        // dashboard
+        tGridW: "Réseau (W)",
+        tSolarW: "Solaire (W)",
+        tTempC: "TEMP1 (°C)",
+        tModeInfo: "MODEINFO",
+        tPrediction: "Prévision",
+        tUpdatedLabel: "Mis à jour :",
+        refreshBtn: "Rafraîchir",
+        lblNextShower: "Prochaine douche",
+        lblExpectedTemp: "Température prévue",
+        lblSuggestedSchedule: "Planning conseillé",
+        // history
+        histLoad: "Charger",
+        csvLink: "Exporter CSV",
+        // boost
+        boostOn: "Activer Boost",
+        boostOff: "Annuler Boost",
+      }
+    };
+
+    function applyLang(lang){
+      if (!lang) return;
+      if (lang !== 'fr') {
+        // EN / ZH: keep current mixed strings (as requested)
+        document.documentElement.lang = lang;
+        const sel = document.getElementById('fLang');
+        if (sel) sel.value = lang;
+        localStorage.setItem('ui_lang', lang);
+        return;
+      }
+      const dict = I18N.fr;
+      for (const [id, txt] of Object.entries(dict)){
+        const el = document.getElementById(id);
+        if (el) el.textContent = txt;
+      }
+      document.documentElement.lang = 'fr';
+      const sel = document.getElementById('fLang');
+      if (sel) sel.value = 'fr';
+      localStorage.setItem('ui_lang', 'fr');
+    }
+
+    // ======== Client page (position + PV params) =========
+
+    // 预设城市坐标（简单示例值）
+    const CITY_PRESETS = {
+      lille:     {lat: 50.62925, lon: 3.057256, alt: 25},
+      calais:    {lat: 50.95129, lon: 1.85869,  alt: 5},
+      dunkerque:{lat: 51.03437, lon: 2.37682,  alt: 4},
+    };
+
+    // 城市下拉改变时，自动填入经纬度海拔
+    const citySel = document.getElementById('c_city');
+    if (citySel){
+      citySel.onchange = ()=>{
+        const v = citySel.value;
+        const p = CITY_PRESETS[v];
+        if (p){
+          q('#c_lat').value = p.lat;
+          q('#c_lon').value = p.lon;
+          q('#c_alt').value = p.alt;
+        }
+      };
+    }
+
+
+    // 切换 full / simple 模式
+    function updatePVModeUI(){
+      const mode = document.querySelector('input[name="pv_mode"]:checked')?.value || 'full';
+      const fullBox   = document.getElementById('pv_full_box');
+      const simpleBox = document.getElementById('pv_simple_box');
+      if (mode === 'full'){
+        fullBox.classList.remove('hidden');
+        simpleBox.classList.add('hidden');
+      }else{
+        fullBox.classList.add('hidden');
+        simpleBox.classList.remove('hidden');
+      }
+    }
+    document.querySelectorAll('input[name="pv_mode"]').forEach(r=>{
+      r.addEventListener('change', updatePVModeUI);
+    });
+
+    // 读取后端已有 client 配置
+    async function loadClient(){
+      try{
+        const j = await apicall('/api/client');
+        if (!j || !j.position) return; // 还没有保存过，保持默认空值
+
+        // 位置
+        q('#c_lat').value = j.position.latitude ?? '';
+        q('#c_lon').value = j.position.longitude ?? '';
+        q('#c_alt').value = j.position.altitude ?? '';
+
+        // PV
+        const pv = j.pv_config || {};
+        if (pv.detail_level === 'simple'){
+          document.querySelector('input[name="pv_mode"][value="simple"]').checked = true;
+        }else{
+          document.querySelector('input[name="pv_mode"][value="full"]').checked = true;
+        }
+        updatePVModeUI();
+
+        if (pv.detail_level === 'full'){
+          q('#pv_azimuth_full').value = pv.azimuth ?? '';
+          q('#pv_tilt_full').value    = pv.tilt ?? '';
+          q('#pv_surface_full').value = pv.surface ?? '';
+          q('#pv_pnom').value         = pv.power_nominal ?? '';
+          q('#pv_inverter_ceiling').value   = pv.inverter_ceiling ?? '';
+          q('#pv_inverter_eff').value       = pv.inverter_efficiency ?? '';
+          q('#pv_cable_losses').value       = pv.cable_losses ?? '';
+        }else{
+          q('#pv_azimuth_simple').value = pv.azimuth ?? '';
+          q('#pv_tilt_simple').value    = pv.tilt ?? '';
+          q('#pv_surface_simple').value = pv.surface ?? '';
+          q('#pv_global_eff').value     = pv.global_efficiency ?? '';
+          q('#pv_auto_adjust').checked  = !!pv.auto_adjusting_params;
+        }
+      }catch(e){
+        console.error('loadClient failed', e);
+      }
+    }
+
+    // 保存 client 配置到后端
+    const saveBtn = document.getElementById('c_save');
+    if (saveBtn){
+      saveBtn.onclick = async ()=>{
+        try{
+          const mode = document.querySelector('input[name="pv_mode"]:checked')?.value || 'full';
+          const position = {
+            latitude:  parseFloat(q('#c_lat').value),
+            longitude: parseFloat(q('#c_lon').value),
+            altitude:  parseFloat(q('#c_alt').value),
+          };
+
+          let pv_config;
+          if (mode === 'full'){
+            pv_config = {
+              detail_level: 'full',
+              azimuth:  parseFloat(q('#pv_azimuth_full').value),
+              tilt:     parseFloat(q('#pv_tilt_full').value),
+              surface:  parseFloat(q('#pv_surface_full').value),
+              power_nominal:       parseFloat(q('#pv_pnom').value),
+              inverter_ceiling:    parseFloat(q('#pv_inverter_ceiling').value),
+              inverter_efficiency: parseFloat(q('#pv_inverter_eff').value),
+              cable_losses:        parseFloat(q('#pv_cable_losses').value),
+              global_efficiency: null,
+              auto_adjusting_params: null
+            };
+          }else{
+            pv_config = {
+              detail_level: 'simple',
+              azimuth:  parseFloat(q('#pv_azimuth_simple').value),
+              tilt:     parseFloat(q('#pv_tilt_simple').value),
+              surface:  parseFloat(q('#pv_surface_simple').value),
+              power_nominal: null,
+              inverter_ceiling: null,
+              inverter_efficiency: null,
+              cable_losses: null,
+              global_efficiency: parseFloat(q('#pv_global_eff').value),
+              auto_adjusting_params: !!q('#pv_auto_adjust').checked
+            };
+          }
+
+          await apicall('/api/client', {
+            method:'POST',
+            body: JSON.stringify({position, pv_config})
+          });
+          q('#c_msg').textContent = 'Saved!';
+          setTimeout(()=>q('#c_msg').textContent='', 1500);
+        }catch(e){
+          q('#c_msg').textContent = 'Error: ' + (e.message || 'save failed');
+        }
+      };
+    }
+
+    // 初始路由
+    guard();
+    // 首次进入各页时做轻量加载
+    window.addEventListener('hashchange', ()=>{
+      const page = location.hash.replace('#/','');
+      if (page==='dashboard') loadStatus();
+      if (page==='history')   q('#histLoad').click();
+      if (page==='boost')     refreshBoost();
+      if (page==='settings')  loadSettings();
+      if (page==='mqtt')      loadMQTT();
+      if (page==='client')    loadClient();
+    });
+  </script>
+</body>
+</html>

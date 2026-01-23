@@ -1,0 +1,7 @@
+{
+  "DEVACCOUNT": {
+    "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$ag1ByLm31hpDiPG+V4ox5g$V7Q1BAwoIksbJLvBPObZL1jz8LgWtbN8HmwYz67jmj0",
+    "role": "dev",
+    "router_base": null
+  }
+}
