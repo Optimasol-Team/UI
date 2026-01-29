@@ -15,7 +15,7 @@ DATA_UI_PORT = 8502
 _data_ui_proc = None
 
 def _data_ui_entry() -> Path:
-     return Path(r"E:\86181\Desktop\projet\UI\UI 5 data新窗口打开版\application_v1-main\app.py")
+     return  Path(__file__).parent / "application_v1-main" / "app.py"
 
 #======加client=====
 from typing import Literal  # 文件开头的 import 行里要补上 Literal
@@ -169,12 +169,21 @@ async def data_ui_start():
         "--server.port", str(DATA_UI_PORT),
         "--server.headless", "true",
     ]
+    
+    env = os.environ.copy()
+    # 如果 data UI 也需要导入项目内模块，可以把它的根目录加入 PYTHONPATH
+    # 这里用 entry.parent（即 app.py 所在目录）作为最保守的根
+    data_root = str(entry.parent)
+    env["PYTHONPATH"] = data_root + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+
     _data_ui_proc = subprocess.Popen(
         cmd,
         cwd=str(entry.parent),
+        env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+
 
     t0 = time.time()
     while time.time() - t0 < 4.0:
@@ -211,13 +220,18 @@ async def optimiser_ui_start():
         "--server.port", str(STREAMLIT_PORT),
         "--server.headless", "true",
     ]
+    # --- FIX: ensure optimiser_engine can be imported in the Streamlit subprocess ---
+    env = os.environ.copy()
+    root = str(_engine_root())
+    env["PYTHONPATH"] = root + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+
     _streamlit_proc = subprocess.Popen(
         cmd,
         cwd=str(_engine_root()),
+        env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-
     # wait for port to open
     t0 = time.time()
     while time.time() - t0 < 4.0:
