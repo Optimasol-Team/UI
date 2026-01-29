@@ -53,15 +53,16 @@ FR: Fond gris clair, texte gris foncé global.-->
       <!--中：六个锚点链接，切换 hash 路由至各页面（dashboard/history/…）
       EN: Six anchor links to hash routes for pages.
       FR: Six liens d’ancrage vers les routes hash des pages.-->
-        <a href="#/dashboard" class="navbtn hover:bg-gray-100">Dashboard</a>
-        <a href="#/data" class="navbtn hover:bg-gray-100">Data</a>
-        <a href="#/optimiser" class="navbtn hover:bg-gray-100">Optimiser</a>
-        <a href="#/history" class="navbtn hover:bg-gray-100">History</a>
-        <a href="#/boost" class="navbtn hover:bg-gray-100">Boost</a>
-        <a href="#/settings" class="navbtn hover:bg-gray-100">Settings</a>
-        <a href="#/mqtt" class="navbtn hover:bg-gray-100">MQTT</a>
-       <a id="navDev" href="#/dev" class="navbtn hover:bg-gray-100">Dev</a>
-          <a href="#/client" class="navbtn hover:bg-gray-100">Client</a>
+      <a id="navDashboard" href="#/dashboard" class="navbtn hover:bg-gray-100">Dashboard</a>
+      <a id="navData"      href="#/data"      class="navbtn hover:bg-gray-100">Data</a>
+      <a id="navOptimiser" href="#/optimiser" class="navbtn hover:bg-gray-100">Optimiser</a>
+      <a id="navHistory"   href="#/history"   class="navbtn hover:bg-gray-100">History</a>
+      <a id="navBoost"     href="#/boost"     class="navbtn hover:bg-gray-100">Boost</a>
+      <a id="navSettings"  href="#/settings"  class="navbtn hover:bg-gray-100">Settings</a>
+      <a id="navMQTT"      href="#/mqtt"      class="navbtn hover:bg-gray-100">MQTT</a>
+      <a id="navDev"       href="#/dev"       class="navbtn hover:bg-gray-100">Dev</a>
+      <a id="navClient"    href="#/client"    class="navbtn hover:bg-gray-100">Client</a>
+
       </nav>
       <div class="ml-auto flex items-center gap-3 text-sm">
         <span id="statusText" class="text-gray-500"></span>
@@ -102,12 +103,11 @@ FR: Fond gris clair, texte gris foncé global.-->
           </label>
           <label class="block text-sm"><span id="lblLanguage">Language</span>
             <select id="fLang" class="mt-1 w-full border rounded-lg px-3 py-2">
-            <!--中：界面语言选择（en/fr/zh）。
+            <!--中：界面语言选择（en/fr）。
             EN: UI language select.
             FR: Sélecteur de langue UI.-->
               <option value="en">English</option>
               <option value="fr">Français</option>
-              <option value="zh">中文</option>
             </select>
           </label>
           <button id="loginBtn" class="w-full py-2 rounded-lg bg-gray-900 text-white hover:opacity-90">Sign in</button>
@@ -203,31 +203,38 @@ FR: Fond gris clair, texte gris foncé global.-->
   </div>
 </section>
 
-    <!-- Settings -->
-    <section id="page-settings" class="hidden">
-      <div class="bg-white p-5 card space-y-3 max-w-xl">
-        <h3 class="font-semibold">User Settings</h3>
-        <label class="block text-sm">Typical shower time
-          <input id="s_typical" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="07:30">
-        </label>
-        <label class="block text-sm">Next shower (override once)
-          <input id="s_next" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="07:30">
-        </label>
-        <label class="block text-sm">Desired temp (next)
-          <input id="s_temp" type="number" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="50">
-        </label>
-        <label class="block text-sm">Guests expected
-          <input id="s_guests" type="number" class="mt-1 w-full border rounded-lg px-3 py-2" value="0">
-        </label>
-        <label class="block text-sm">Page refresh interval (s)
-          <input id="s_refresh" type="number" class="mt-1 w-full border rounded-lg px-3 py-2" value="5">
-        </label>
-        <div class="flex gap-2">
-          <button id="s_save" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">Save</button>
-          <span id="s_msg" class="text-sm text-green-700"></span>
-        </div>
-      </div>
-    </section>
+   <!-- Settings -->
+<section id="page-settings" class="hidden">
+  <div class="bg-white p-5 card space-y-3 max-w-xl">
+    <h3 class="font-semibold" id="tUserSettings">User Settings</h3>
+
+    <label class="block text-sm"><span id="lblTypicalShower">Typical shower time</span>
+      <input id="s_typical" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="07:30">
+    </label>
+
+    <label class="block text-sm"><span id="lblNextShowerOverride">Next shower (override once)</span>
+      <input id="s_next" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="07:30">
+    </label>
+
+    <label class="block text-sm"><span id="lblDesiredTempNext">Desired temp (next)</span>
+      <input id="s_temp" type="number" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="50">
+    </label>
+
+    <label class="block text-sm"><span id="lblGuestsExpected">Guests expected</span>
+      <input id="s_guests" type="number" class="mt-1 w-full border rounded-lg px-3 py-2" value="0">
+    </label>
+
+    <label class="block text-sm"><span id="lblRefreshInterval">Page refresh interval (s)</span>
+      <input id="s_refresh" type="number" class="mt-1 w-full border rounded-lg px-3 py-2" value="5">
+    </label>
+
+    <div class="flex gap-2">
+      <button id="s_save" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">Save</button>
+      <span id="s_msg" class="text-sm text-green-700"></span>
+    </div>
+  </div>
+</section>
+
 
     <!-- MQTT -->
     <section id="page-mqtt" class="hidden">
@@ -242,42 +249,52 @@ FR: Fond gris clair, texte gris foncé global.-->
     </section>
 
     <!-- Dev -->
-    <section id="page-dev" class="hidden">
+<section id="page-dev" class="hidden">
   <div class="bg-white p-5 card space-y-5 max-w-3xl">
-    <h3 class="font-semibold">Developer</h3>
+    <h3 class="font-semibold" id="tDevTitle">Developer</h3>
 
-    <!-- Create new user -->
     <div class="border rounded-xl p-4 space-y-3">
-      <div class="text-sm text-gray-600">Create a new router account (dev only)</div>
+      <div class="text-sm text-gray-600" id="tDevCreateHint">Create a new router account (dev only)</div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-        <label class="block">Router ID
+        <label class="block"><span id="lblDevRouterId">Router ID</span>
           <input id="dev_new_id" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="PVROUTER002">
         </label>
 
-        <label class="block">Password
+        <label class="block"><span id="lblDevPassword">Password</span>
           <input id="dev_new_pass" type="password" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="abc123XYZ!">
         </label>
 
-        <label class="block">Role
+        <label class="block"><span id="lblDevRole">Role</span>
           <select id="dev_new_role" class="mt-1 w-full border rounded-lg px-3 py-2">
             <option value="user" selected>user</option>
             <option value="dev">dev</option>
           </select>
         </label>
 
-        <label class="block">Router base (optional)
+        <label class="block"><span id="lblDevRouterBase">Router base (optional)</span>
           <input id="dev_new_base" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="http://192.168.1.112">
         </label>
       </div>
 
       <div class="flex items-center gap-3">
         <button id="devCreateBtn" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">
-          Create user
+          <span id="btnDevCreate">Create user</span>
         </button>
         <span id="devCreateMsg" class="text-sm"></span>
       </div>
     </div>
+
+    <div class="space-y-3">
+      <div class="text-sm text-gray-600" id="tDevListHint">List routers (dev only):</div>
+      <button id="devList" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">
+        <span id="btnDevLoadRouters">Load Routers</span>
+      </button>
+      <pre id="devOut" class="text-xs mt-2 whitespace-pre-wrap"></pre>
+    </div>
+  </div>
+</section>
+
 
     <!-- List routers -->
     <div class="space-y-3">
@@ -288,124 +305,100 @@ FR: Fond gris clair, texte gris foncé global.-->
   </div>
 </section>
 
-    <!-- Client -->
-    <section id="page-client" class="hidden space-y-4">
-      <!-- 位置模块 -->
-      <div class="bg-white p-5 card space-y-3 max-w-2xl">
-        <h3 class="font-semibold">Client – Position</h3>
+<!-- Client -->
+<section id="page-client" class="hidden space-y-4">
 
-        <!-- 城市下拉：里尔 / 加来 / 敦刻尔克 -->
-        <label class="block text-sm">City (optional)
-          <select id="c_city" class="mt-1 w-full border rounded-lg px-3 py-2">
-            <option value="">-- Manual / Other --</option>
-            <option value="lille">Lille</option>
-            <option value="calais">Calais</option>
-            <option value="dunkerque">Dunkerque</option>
-          </select>
-        </label>
+  <div class="bg-white p-5 card space-y-3 max-w-2xl">
+    <h3 class="font-semibold" id="tClientPosition">Client – Position</h3>
 
-        <!-- 经度 / 纬度 / 海拔 -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <label class="block text-sm">Latitude
-            <input id="c_lat" type="number" step="0.000001"
-                   class="mt-1 w-full border rounded-lg px-3 py-2"
-                   placeholder="e.g. 50.62925">
-          </label>
-          <label class="block text-sm">Longitude
-            <input id="c_lon" type="number" step="0.000001"
-                   class="mt-1 w-full border rounded-lg px-3 py-2"
-                   placeholder="e.g. 3.057256">
-          </label>
-          <label class="block text-sm">Altitude (m)
-            <input id="c_alt" type="number" step="1"
-                   class="mt-1 w-full border rounded-lg px-3 py-2"
-                   placeholder="e.g. 25">
-          </label>
-        </div>
+    <label class="block text-sm"><span id="lblCityOptional">City (optional)</span>
+      <select id="c_city" class="mt-1 w-full border rounded-lg px-3 py-2">
+        <option value="" id="optCityManual">-- Manual / Other --</option>
+        <option value="lille">Lille</option>
+        <option value="calais">Calais</option>
+        <option value="dunkerque">Dunkerque</option>
+      </select>
+    </label>
 
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <label class="block text-sm"><span id="lblLatitude">Latitude</span>
+        <input id="c_lat" type="number" step="0.000001" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="e.g. 50.62925">
+      </label>
+      <label class="block text-sm"><span id="lblLongitude">Longitude</span>
+        <input id="c_lon" type="number" step="0.000001" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="e.g. 3.057256">
+      </label>
+      <label class="block text-sm"><span id="lblAltitudeM">Altitude (m)</span>
+        <input id="c_alt" type="number" step="1" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="e.g. 25">
+      </label>
+    </div>
+  </div>
 
-      <!-- 光伏参数模块 -->
-      <div class="bg-white p-5 card space-y-3 max-w-2xl">
-        <h3 class="font-semibold">Client – PV parameters</h3>
+  <div class="bg-white p-5 card space-y-3 max-w-2xl">
+    <h3 class="font-semibold" id="tClientPV">Client – PV parameters</h3>
 
-        <!-- 两种模式：知道所有技术细节 / 只知道简化参数 -->
-        <div class="flex flex-col md:flex-row gap-4 text-sm">
-          <label class="inline-flex items-center gap-2">
-            <input type="radio" name="pv_mode" value="full" checked>
-            <span>I know all technical details</span>
-          </label>
-          <label class="inline-flex items-center gap-2">
-            <input type="radio" name="pv_mode" value="simple">
-            <span>I don't know all details (simple mode)</span>
-          </label>
-        </div>
+    <div class="flex flex-col md:flex-row gap-4 text-sm">
+      <label class="inline-flex items-center gap-2">
+        <input type="radio" name="pv_mode" value="full" checked>
+        <span id="lblPVFull">I know all technical details</span>
+      </label>
+      <label class="inline-flex items-center gap-2">
+        <input type="radio" name="pv_mode" value="simple">
+        <span id="lblPVSimple">I don't know all details (simple mode)</span>
+      </label>
+    </div>
 
-        <!-- 模式 1：全部技术细节 -->
-        <div id="pv_full_box" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-          <label class="block">Azimuth du panneau
-            <input id="pv_azimuth_full" type="number"
-                   class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="180">
-          </label>
-          <label class="block">Inclinaison / Tilt (°)
-            <input id="pv_tilt_full" type="number"
-                   class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="25">
-          </label>
-          <label class="block">Surface du panneau (m²)
-            <input id="pv_surface_full" type="number" step="0.1"
-                   class="mt-1 w-full border rounded-lg px-3 py-2">
-          </label>
-          <label class="block">Puissance nominale du panneau (Wc)
-            <input id="pv_pnom" type="number"
-                   class="mt-1 w-full border rounded-lg px-3 py-2">
-          </label>
-          <label class="block">Plafond de puissance de l’onduleur (W)
-            <input id="pv_inverter_ceiling" type="number"
-                   class="mt-1 w-full border rounded-lg px-3 py-2">
-          </label>
-          <label class="block">Efficacité nominale de l’onduleur
-            <input id="pv_inverter_eff" type="number" step="0.01"
-                   class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="0.97">
-          </label>
-          <label class="block">Pertes dans les câbles (%)
-            <input id="pv_cable_losses" type="number" step="0.1"
-                   class="mt-1 w-full border rounded-lg px-3 py-2">
-          </label>
-        </div>
+    <div id="pv_full_box" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+      <label class="block"><span id="lblAzimuth">Azimuth du panneau</span>
+        <input id="pv_azimuth_full" type="number" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="180">
+      </label>
+      <label class="block"><span id="lblTilt">Inclinaison / Tilt (°)</span>
+        <input id="pv_tilt_full" type="number" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="25">
+      </label>
+      <label class="block"><span id="lblSurface">Surface du panneau (m²)</span>
+        <input id="pv_surface_full" type="number" step="0.1" class="mt-1 w-full border rounded-lg px-3 py-2">
+      </label>
+      <label class="block"><span id="lblPnom">Puissance nominale du panneau (Wc)</span>
+        <input id="pv_pnom" type="number" class="mt-1 w-full border rounded-lg px-3 py-2">
+      </label>
+      <label class="block"><span id="lblInvCeiling">Plafond de puissance de l’onduleur (W)</span>
+        <input id="pv_inverter_ceiling" type="number" class="mt-1 w-full border rounded-lg px-3 py-2">
+      </label>
+      <label class="block"><span id="lblInvEff">Efficacité nominale de l’onduleur</span>
+        <input id="pv_inverter_eff" type="number" step="0.01" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="0.97">
+      </label>
+      <label class="block"><span id="lblCableLoss">Pertes dans les câbles (%)</span>
+        <input id="pv_cable_losses" type="number" step="0.1" class="mt-1 w-full border rounded-lg px-3 py-2">
+      </label>
+    </div>
 
-        <!-- 模式 2：简化参数 + 整体效率 -->
-        <div id="pv_simple_box" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm hidden">
-          <label class="block">Azimuth du panneau
-            <input id="pv_azimuth_simple" type="number"
-                   class="mt-1 w-full border rounded-lg px-3 py-2">
-          </label>
-          <label class="block">Inclinaison / Tilt (°)
-            <input id="pv_tilt_simple" type="number"
-                   class="mt-1 w-full border rounded-lg px-3 py-2">
-          </label>
-          <label class="block">Surface du panneau (m²)
-            <input id="pv_surface_simple" type="number" step="0.1"
-                   class="mt-1 w-full border rounded-lg px-3 py-2">
-          </label>
-          <label class="block">Rendement global de l’installation
-            <input id="pv_global_eff" type="number" step="0.01"
-                   class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="0.8">
-          </label>
-          <label class="inline-flex items-center gap-2 mt-2">
-            <input id="pv_auto_adjust" type="checkbox" checked>
-            <span>Use auto_adjusting_params (recommended)</span>
-          </label>
-        </div>
+    <div id="pv_simple_box" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm hidden">
+      <label class="block"><span id="lblAzimuth2">Azimuth du panneau</span>
+        <input id="pv_azimuth_simple" type="number" class="mt-1 w-full border rounded-lg px-3 py-2">
+      </label>
+      <label class="block"><span id="lblTilt2">Inclinaison / Tilt (°)</span>
+        <input id="pv_tilt_simple" type="number" class="mt-1 w-full border rounded-lg px-3 py-2">
+      </label>
+      <label class="block"><span id="lblSurface2">Surface du panneau (m²)</span>
+        <input id="pv_surface_simple" type="number" step="0.1" class="mt-1 w-full border rounded-lg px-3 py-2">
+      </label>
+      <label class="block"><span id="lblGlobalEff">Rendement global de l’installation</span>
+        <input id="pv_global_eff" type="number" step="0.01" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="0.8">
+      </label>
 
-        <!-- 保存按钮 -->
-        <div class="flex items-center gap-3 mt-2">
-          <button id="c_save"
-                  class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">
-            Save client
-          </button>
-          <span id="c_msg" class="text-sm text-green-700"></span>
-        </div>
-      </div>
-    </section>
+      <label class="inline-flex items-center gap-2 mt-2">
+        <input id="pv_auto_adjust" type="checkbox" checked>
+        <span id="lblAutoAdjust">Use auto_adjusting_params (recommended)</span>
+      </label>
+    </div>
+
+    <div class="flex items-center gap-3 mt-2">
+      <button id="c_save" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90">
+        <span id="btnSaveClient">Save client</span>
+      </button>
+      <span id="c_msg" class="text-sm text-green-700"></span>
+    </div>
+  </div>
+</section>
 
   </main>
 
@@ -466,6 +459,8 @@ async function ensureMe(){
   updateDevNavVisibility();
   return ME;
 }
+
+
 
 async function guard(){
   const hash = location.hash || '#/login';
@@ -550,7 +545,9 @@ async function openDataUI(){
       const p = j.predict || {};
       q('#pred_shower').textContent = p.next_shower ?? '--';
       q('#pred_temp').textContent = n(p.expected_temp);
-      q('#pred_ok').textContent = p.solar_enough ? 'YES' : 'NO';
+      const isFR = (localStorage.getItem('ui_lang') === 'fr');
+      q('#pred_ok').textContent = p.solar_enough ? (isFR ? 'OUI' : 'YES') : (isFR ? 'NON' : 'NO');
+
       q('#pred_kwh').textContent = n(p.extra_kwh_needed);
       q('#pred_cost').textContent = n(p.estimated_cost);
       q('#pred_sched').textContent = (p.suggested_schedule||[]).join(', ');
@@ -576,7 +573,10 @@ async function openDataUI(){
 
     // ======== Boost =========
     async function refreshBoost(){
-      const j = await apicall('/api/boost'); q('#boostStatus').textContent = j.active ? 'ACTIVE' : 'INACTIVE';
+      const j = await apicall('/api/boost'); 
+      const isFR = (localStorage.getItem('ui_lang') === 'fr');
+    q('#boostStatus').textContent = j.active ? (isFR ? 'ACTIF' : 'ACTIVE') : (isFR ? 'INACTIF' : 'INACTIVE');
+
     }
     q('#boostOn').onclick  = async()=>{ await apicall('/api/boost',{method:'POST',body:JSON.stringify({on:true})});  refreshBoost(); };
     q('#boostOff').onclick = async()=>{ await apicall('/api/boost',{method:'DELETE'}); refreshBoost(); };
@@ -599,7 +599,9 @@ async function openDataUI(){
         page_refresh_interval: parseInt(q('#s_refresh').value||'5'),
       };
       await apicall('/api/settings',{method:'POST',body:JSON.stringify(b)});
-      q('#s_msg').textContent = 'Saved!';
+      const isFR = (localStorage.getItem('ui_lang') === 'fr');
+      q('#s_msg').textContent = isFR ? 'Enregistré !' : 'Saved!';
+
       setTimeout(()=>q('#s_msg').textContent='', 1500);
     };
 
@@ -607,7 +609,9 @@ async function openDataUI(){
     async function loadMQTT(){
       const j = await apicall('/api/mqtt/status');
       q('#mq_host').textContent = j.broker; q('#mq_port').textContent = j.port;
-      q('#mq_conn').textContent = j.connected ? 'Yes' : 'No';
+      const isFR = (localStorage.getItem('ui_lang') === 'fr');
+      q('#mq_conn').textContent = j.connected ? (isFR ? 'Oui' : 'Yes') : (isFR ? 'Non' : 'No');
+
       q('#mq_sync').textContent = j.last_sync || '-';
       q('#mq_hz').textContent   = j.publish_hz || '-';
       q('#mq_topic').textContent= j.sub_topic || '-';
@@ -631,11 +635,16 @@ if (devCreateBtn){
     const role      = (document.getElementById('dev_new_role').value || 'user');
     const router_base = (document.getElementById('dev_new_base').value || '').trim() || null;
 
-    if (!router_id || !password){
-      msg.className = 'text-sm text-red-700';
-      msg.textContent = 'Router ID and Password are required.';
-      return;
-    }
+   if (!router_id || !password){
+  msg.className = 'text-sm text-red-700';
+
+  const isFR = (localStorage.getItem('ui_lang') === 'fr');
+  msg.textContent = isFR
+    ? "L'ID du routeur et le mot de passe sont requis."
+    : 'Router ID and Password are required.';
+
+  return;
+}
 
     try{
       const payload = { router_id, password, role, router_base };
@@ -656,68 +665,159 @@ if (devCreateBtn){
     function q(s){ return document.querySelector(s); }
     function n(v){ return (v===0||v) ? String(v) : '--'; }
 
-    // ======== i18n (FR full UI) =========
-    const I18N = {
-      fr: {
-        // top nav
-        navDashboard: "Tableau de bord",
-        navData: "Données",
-        navOptimiser: "Optimiseur",
-        navHistory: "Historique",
-        navBoost: "Boost",
-        navSettings: "Paramètres",
-        navMQTT: "MQTT",
-        navClient: "Client",
-        navDev: "Dev",
-        // header / session
-        logoutBtn: "Se déconnecter",
-        statusText: "Connecté",
-        // login
-        tLoginTitle: "Connexion",
-        lblRouterId: "ID du routeur",
-        lblPassword: "Mot de passe",
-        lblLanguage: "Langue",
-        loginBtn: "Se connecter",
-        // dashboard
-        tGridW: "Réseau (W)",
-        tSolarW: "Solaire (W)",
-        tTempC: "TEMP1 (°C)",
-        tModeInfo: "MODEINFO",
-        tPrediction: "Prévision",
-        tUpdatedLabel: "Mis à jour :",
-        refreshBtn: "Rafraîchir",
-        lblNextShower: "Prochaine douche",
-        lblExpectedTemp: "Température prévue",
-        lblSuggestedSchedule: "Planning conseillé",
-        // history
-        histLoad: "Charger",
-        csvLink: "Exporter CSV",
-        // boost
-        boostOn: "Activer Boost",
-        boostOff: "Annuler Boost",
-      }
-    };
+// ======== i18n (FR full UI) =========
+const I18N = {
+  fr: {
+    // top nav
+    navDashboard: "Tableau de bord",
+    navData: "Données",
+    navOptimiser: "Optimiseur",
+    navHistory: "Historique",
+    navBoost: "Boost",
+    navSettings: "Paramètres",
+    navMQTT: "MQTT",
+    navClient: "Client",
+    navDev: "Dev",
 
-    function applyLang(lang){
-      if (!lang) return;
-      if (lang !== 'fr') {
-        // EN / ZH: keep current mixed strings (as requested)
-        document.documentElement.lang = lang;
-        const sel = document.getElementById('fLang');
-        if (sel) sel.value = lang;
-        localStorage.setItem('ui_lang', lang);
-        return;
-      }
-      const dict = I18N.fr;
-      for (const [id, txt] of Object.entries(dict)){
-        const el = document.getElementById(id);
-        if (el) el.textContent = txt;
-      }
-      document.documentElement.lang = 'fr';
-      const sel = document.getElementById('fLang');
-      if (sel) sel.value = 'fr';
-      localStorage.setItem('ui_lang', 'fr');
+    // header / session
+    logoutBtn: "Se déconnecter",
+    statusText: "Connecté",
+
+    // login
+    tLoginTitle: "Connexion",
+    lblRouterId: "ID du routeur",
+    lblPassword: "Mot de passe",
+    lblLanguage: "Langue",
+    loginBtn: "Se connecter",
+
+    // dashboard
+    tGridW: "Réseau (W)",
+    tSolarW: "Solaire (W)",
+    tTempC: "TEMP1 (°C)",
+    tModeInfo: "MODEINFO",
+    tPrediction: "Prévision",
+    tUpdatedLabel: "Mis à jour :",
+    refreshBtn: "Rafraîchir",
+    lblNextShower: "Prochaine douche",
+    lblExpectedTemp: "Température prévue",
+    lblSuggestedSchedule: "Planning conseillé",
+// settings
+tUserSettings: "Paramètres utilisateur",
+lblTypicalShower: "Heure habituelle de douche",
+lblNextShowerOverride: "Prochaine douche (exceptionnelle)",
+lblDesiredTempNext: "Température souhaitée (prochaine)",
+lblGuestsExpected: "Invités attendus",
+lblRefreshInterval: "Intervalle de rafraîchissement (s)",
+s_save: "Enregistrer", // 你按钮本身 id=s_save（但你按钮文字在 HTML 里没包 span，这行可不写；推荐把按钮文字包 span 或给按钮 id 做翻译）
+
+// dev
+tDevTitle: "Développeur",
+tDevCreateHint: "Créer un nouveau compte routeur (dev uniquement)",
+lblDevRouterId: "ID du routeur",
+lblDevPassword: "Mot de passe",
+lblDevRole: "Rôle",
+lblDevRouterBase: "Base du routeur (optionnel)",
+btnDevCreate: "Créer l’utilisateur",
+tDevListHint: "Lister les routeurs (dev uniquement) :",
+btnDevLoadRouters: "Charger les routeurs",
+
+// client position
+tClientPosition: "Client – Position",
+lblCityOptional: "Ville (optionnel)",
+optCityManual: "-- Manuel / Autre --",
+lblLatitude: "Latitude",
+lblLongitude: "Longitude",
+lblAltitudeM: "Altitude (m)",
+
+// client PV
+tClientPV: "Client – Paramètres PV",
+lblPVFull: "Je connais tous les détails techniques",
+lblPVSimple: "Je ne connais pas tous les détails (mode simplifié)",
+lblAutoAdjust: "Utiliser auto_adjusting_params (recommandé)",
+btnSaveClient: "Enregistrer le client",
+
+    // history
+    histLoad: "Charger",
+    csvLink: "Exporter CSV",
+
+    // boost
+    boostOn: "Activer Boost",
+    boostOff: "Annuler Boost",
+
+ 
+    tUserSettings: "Paramètres utilisateur",
+
+    tBoostStatusLabel: "Statut :",
+
+  
+    yes: "Oui",
+    no: "Non",
+  }
+};
+
+// ======== i18n baseline cache (restore EN mixed UI) =========
+// We keep the original HTML text as "EN baseline".
+// Once FR applied, switching back to EN will restore these cached strings.
+const BASE_TEXT = {};
+let BASE_READY = false;
+
+function captureBaseline(){
+  if (BASE_READY) return;
+  const dict = I18N.fr; // only cache ids that we may translate
+  for (const id of Object.keys(dict)){
+    const el = document.getElementById(id);
+    if (el && BASE_TEXT[id] === undefined){
+      BASE_TEXT[id] = el.textContent;
     }
+  }
+  BASE_READY = true;
+}
+
+
+function applyLang(lang){
+  if (!lang) return;
+
+  // First time we touch i18n, cache the original UI text (EN baseline)
+  captureBaseline();
+
+  // Persist selection
+  localStorage.setItem('ui_lang', lang);
+
+  // If not FR => restore baseline text (your original mixed-English UI)
+  if (lang !== 'fr') {
+    document.documentElement.lang = lang;
+
+    const sel = document.getElementById('fLang');
+    if (sel) sel.value = lang;
+
+    // restore original strings
+    for (const [id, txt] of Object.entries(BASE_TEXT)){
+      const el = document.getElementById(id);
+      if (el) el.textContent = txt;
+    }
+    return;
+  }
+
+  // FR => overwrite with FR dict
+  const dict = I18N.fr;
+  for (const [id, txt] of Object.entries(dict)){
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  }
+
+  document.documentElement.lang = 'fr';
+  const sel = document.getElementById('fLang');
+  if (sel) sel.value = 'fr';
+}
+
+// ======== language selector live preview =========
+const langSel = document.getElementById('fLang');
+if (langSel){
+  langSel.addEventListener('change', (e)=>{
+    applyLang(e.target.value);
+  });
+}
+
 
     // ======== Client page (position + PV params) =========
 
@@ -845,13 +945,17 @@ if (devCreateBtn){
             method:'POST',
             body: JSON.stringify({position, pv_config})
           });
-          q('#c_msg').textContent = 'Saved!';
+          const isFR = (localStorage.getItem('ui_lang') === 'fr');
+          q('#c_msg').textContent = isFR ? 'Enregistré !' : 'Saved!';
+
           setTimeout(()=>q('#c_msg').textContent='', 1500);
         }catch(e){
           q('#c_msg').textContent = 'Error: ' + (e.message || 'save failed');
         }
       };
     }
+
+    applyLang(localStorage.getItem('ui_lang') || 'en');
 
     // 初始路由
     guard();
