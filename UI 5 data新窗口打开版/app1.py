@@ -261,6 +261,28 @@ def make_token() -> str:
 def now_ts() -> float:
     return time.time()
 
+# ========== Proxy 到主程序 server.py（真实数据源） ==========
+SERVER_BASE = os.getenv("OPTIMASOL_SERVER_BASE", "http://127.0.0.1:8000").rstrip("/")
+
+def _srv_auth_headers(sess: Dict[str, Any]) -> Dict[str, str]:
+    token = sess.get("server_token")
+    if not token:
+        return {}
+    return {"Authorization": token}
+
+async def _srv_get(path: str, sess: Dict[str, Any], params: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    async with httpx.AsyncClient(timeout=6) as c:
+        r = await c.get(f"{SERVER_BASE}{path}", headers=_srv_auth_headers(sess), params=params)
+        r.raise_for_status()
+        return r.json()
+
+async def _srv_post(path: str, sess: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, Any]:
+    async with httpx.AsyncClient(timeout=6) as c:
+        r = await c.post(f"{SERVER_BASE}{path}", headers=_srv_auth_headers(sess), json=payload)
+        r.raise_for_status()
+        return r.json()
+
+
 # ===================== P01 登录 =====================
 class LoginIn(BaseModel):
     router_id: str
@@ -274,13 +296,32 @@ COOKIE_MAX_AGE = 3600 * 8  # 8小时
 async def login(p: LoginIn, response: Response):
     rid = p.router_id.strip()
 
+   # 1) 优先走主程序 server.py 登录（获取 token）
+server_token = None
+client_id = None
+try:
+    # 注意：server.py 的 /api/login 要求 email 格式
+    # 所以这里如果你的 rid 不是 email，就会 422/400，直接进入 except 回退本地登录
+    res = await _srv_post("/api/login", sess={}, payload={"email": rid, "password": p.password})
+    server_token = res.get("token")
+    client_id = res.get("client_id")
+except Exception:
+    server_token = None
+
+# 2) 如果 server 登录没拿到 token，则回退你原来的本地 users.json 登录
+if not server_token:
     users = load_users()
     u = users.get(rid)
     if not u:
         raise HTTPException(401, "Bad credentials")
-
     if not pwd_context.verify(normalize_password(p.password), u["password_hash"]):
         raise HTTPException(401, "Bad credentials")
+    role = u.get("role", "user")
+    router_base = u.get("router_base", None)
+else:
+    # server 登录成功：角色先按 user（或你后面从 /api/me 拿）
+    role = "user"
+    router_base = None
 
     role = u.get("role", "user")
     router_base = u.get("router_base", None)
@@ -292,6 +333,9 @@ async def login(p: LoginIn, response: Response):
         "role": role,
         "lang": p.lang or "en",
         "exp": now_ts() + COOKIE_MAX_AGE,
+        "server_token": server_token,
+        "client_id": client_id,
+
     }
 
     response.set_cookie(
@@ -338,11 +382,27 @@ async def post_router_cmd(base: str, payload: Dict[str, Any]) -> bool:
 
 @app.get("/api/auth/me")
 async def me(sess=Depends(auth)):
+    # 有 server_token：去主程序 server.py 拿更完整的身份信息
+    if sess.get("server_token"):
+        try:
+            me = await _srv_get("/api/me", sess)
+            # 你前端期望 router_id/role/lang；这里做字段映射
+            return {
+                "router_id": me.get("client_id") or sess.get("router_id"),
+                "role": sess.get("role", "user"),
+                "lang": sess.get("lang", "en"),
+                "me_raw": me,  # 可选：调试用
+            }
+        except Exception:
+            pass
+
+    # 否则回退原逻辑
     return {
         "router_id": sess.get("router_id"),
         "role": sess.get("role", "user"),
         "lang": sess.get("lang", "en"),
     }
+
    
 @app.post("/api/auth/logout")
 async def logout(response: Response):
