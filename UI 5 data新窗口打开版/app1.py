@@ -1,46 +1,59 @@
 # app.py
-import os, time, json, csv, io, asyncio, secrets
-from typing import Optional, Dict, Any, List
-from fastapi import FastAPI, HTTPException, Header, Depends, Response, Request
+import os, json, csv, io, asyncio, secrets
+import sys, socket, subprocess
+from pathlib import Path
+from typing import Optional, Dict, Any, List, Literal
+
+import httpx
+from fastapi import FastAPI, HTTPException, Depends, Response, Request, Query
 from passlib.context import CryptContext
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import httpx
-import sys, time, socket, subprocess
-from pathlib import Path
-from fastapi import HTTPException
+import hashlib
+import time
 
+
+# ===================== Streamlit / Subprocess =====================
 DATA_UI_PORT = 8502
 _data_ui_proc = None
 
 def _data_ui_entry() -> Path:
-     return  Path(__file__).parent / "application_v1-main" / "app.py"
+    return Path(__file__).parent / "application_v1-main" / "app.py"
 
-#======加client=====
-from typing import Literal  # 文件开头的 import 行里要补上 Literal
 
+STREAMLIT_PORT = 8501
+_streamlit_proc = None
+
+def _is_port_open(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.2)
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
+def _streamlit_entry() -> Path:
+    return Path(__file__).parent / "Optimiser_Engine-v2.0-main" / "apps" / "simulator_simple" / "main.py"
+
+def _engine_root() -> Path:
+    return Path(__file__).parent / "Optimiser_Engine-v2.0-main"
+
+
+# ===================== Client Config Models =====================
 class PositionIn(BaseModel):
     latitude: float
     longitude: float
     altitude: float
 
 class PVConfigIn(BaseModel):
-    # detail_level: "full" = 用户知道全部技术细节; "simple" = 只填少量信息+整体效率
     detail_level: Literal["full", "simple"]
-
-    # 公共字段
     azimuth: float
     tilt: float
     surface: float
 
-    # detail_level = "full" 时使用：
     power_nominal: Optional[float] = None
     inverter_ceiling: Optional[float] = None
     inverter_efficiency: Optional[float] = None
     cable_losses: Optional[float] = None
 
-    # detail_level = "simple" 时使用：
     global_efficiency: Optional[float] = None
     auto_adjusting_params: Optional[bool] = None
 
@@ -48,14 +61,14 @@ class ClientConfigIn(BaseModel):
     position: PositionIn
     pv_config: PVConfigIn
 
-# ===== Password hashing + users.json storage =====
+
+# ===================== Password hashing + users.json storage =====================
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
-import hashlib
 
 def normalize_password(pw: str) -> str:
     """
-    bcrypt 有 72 bytes 限制。
-    超过 72 bytes 就先做 SHA256（不可逆），再交给 bcrypt。
+    passlib 的某些方案对超长密码可能有处理限制。
+    超长时先做 SHA256，再交给 hash。
     """
     b = pw.encode("utf-8")
     if len(b) <= 72:
@@ -76,50 +89,41 @@ def save_users(users: Dict[str, Dict[str, Any]]) -> None:
         json.dump(users, f, ensure_ascii=False, indent=2)
 
 def ensure_bootstrap_dev() -> None:
-    """
-    第一次运行时：如果 users.json 不存在 DEVACCOUNT，
-    就从环境变量 DEV_PASSWORD 读取一次明文密码，生成 hash 写入 users.json。
-    写完以后你就再也不需要 DEV_PASSWORD 了。
-    """
     users = load_users()
     if DEV_ID in users:
         return
-
     dev_pwd = os.getenv("DEV_PASSWORD")
     if not dev_pwd:
         print("[WARN] DEVACCOUNT not found. Set DEV_PASSWORD ONCE to bootstrap dev account.")
         return
 
     users[DEV_ID] = {
-       "password_hash": pwd_context.hash(normalize_password(dev_pwd)),
+        "password_hash": pwd_context.hash(normalize_password(dev_pwd)),
         "role": "dev",
-        "router_base": None
+        "router_base": None,
     }
     save_users(users)
     print("[OK] Bootstrapped DEVACCOUNT into users.json. You can remove DEV_PASSWORD now.")
 
-    # 简易设置存储：router_id -> dict
-SETTINGS: Dict[str, Dict[str, Any]] = {}
-# 简易历史缓存：router_id -> list[dict]  （真实项目请用SQLite）
-HISTORY: Dict[str, List[Dict[str, Any]]] = {}
 
-# 新增：简易 client 配置存储（位置 + 光伏参数）
+# ===================== In-memory stores (demo) =====================
+# 简易会话：token -> {router_base, role, exp, server_token, ...}
+SESS: Dict[str, Dict[str, Any]] = {}
+# 简易设置存储：router_id -> dict
+SETTINGS: Dict[str, Dict[str, Any]] = {}
+# 简易历史缓存：router_id -> list[dict]
+HISTORY: Dict[str, List[Dict[str, Any]]] = {}
+# 简易 client 配置存储（位置 + 光伏参数）
 CLIENTS: Dict[str, Dict[str, Any]] = {}
 
-
-
 # ===================== 可配置区（开发期简化） =====================
-# 路由器ID -> 实际设备地址（示例）。以后可改成数据库/配置文件。
 ROUTER_MAP = {
     "PVROUTER001": "http://192.168.1.111",
     "DEVBOX": "http://192.168.1.50",
 }
 
-
-# 是否允许直接访问真机（没有设备时留 False 用占位数据）
 ENABLE_REAL_DEVICE = False
 
-# MQTT（占位：这里仅返回状态，不做真实连接。以后接入 paho-mqtt）
 MQTT_STATUS = {
     "enabled": False,
     "broker": "mqtt.example.com",
@@ -130,7 +134,8 @@ MQTT_STATUS = {
     "sub_topic": "PVROUTER007/DATA",
 }
 
-# ===================== 应用基本设置 =====================
+
+# ===================== FastAPI app =====================
 app = FastAPI(title="PV UI Backend", version="0.1")
 app.add_middleware(
     CORSMiddleware,
@@ -139,127 +144,14 @@ app.add_middleware(
 )
 ensure_bootstrap_dev()
 
-STREAMLIT_PORT = 8501
-_streamlit_proc = None
 
-def _is_port_open(port: int) -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(0.2)
-        return s.connect_ex(("127.0.0.1", port)) == 0
-
-def _streamlit_entry() -> Path:
-    # ✅ 你已经确认入口在这里
-    return Path(__file__).parent / "Optimiser_Engine-v2.0-main" / "apps" / "simulator_simple" / "main.py"
-
-def _engine_root() -> Path:
-    return Path(__file__).parent / "Optimiser_Engine-v2.0-main"
-
-@app.post("/api/data_ui/start")
-async def data_ui_start():
-    global _data_ui_proc
-    entry = _data_ui_entry()
-    if not entry.exists():
-        raise HTTPException(500, f"Data UI entry not found: {entry}")
-
-    if _is_port_open(DATA_UI_PORT):
-        return {"ok": True, "already_running": True, "url": f"http://127.0.0.1:{DATA_UI_PORT}"}
-
-    cmd = [
-        sys.executable, "-m", "streamlit", "run", str(entry),
-        "--server.port", str(DATA_UI_PORT),
-        "--server.headless", "true",
-    ]
-    
-    env = os.environ.copy()
-    # 如果 data UI 也需要导入项目内模块，可以把它的根目录加入 PYTHONPATH
-    # 这里用 entry.parent（即 app.py 所在目录）作为最保守的根
-    data_root = str(entry.parent)
-    env["PYTHONPATH"] = data_root + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
-
-    _data_ui_proc = subprocess.Popen(
-        cmd,
-        cwd=str(entry.parent),
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-
-    t0 = time.time()
-    while time.time() - t0 < 4.0:
-        if _is_port_open(DATA_UI_PORT):
-            return {"ok": True, "already_running": False, "url": f"http://127.0.0.1:{DATA_UI_PORT}"}
-        time.sleep(0.1)
-
-    raise HTTPException(500, "Data UI failed to start (port not open).")
-
-@app.get("/api/data_ui/status")
-async def data_ui_status():
-    running = _is_port_open(DATA_UI_PORT)
-    return {"ok": True, "running": running, "url": f"http://127.0.0.1:{DATA_UI_PORT}"}
-
-@app.post("/api/optimiser_ui/start")
-async def optimiser_ui_start():
-    """
-    Start optimiser Streamlit UI (DEMO/AUDIT purpose).
-    Returns the URL to open.
-    """
-    global _streamlit_proc
-
-    entry = _streamlit_entry()
-    if not entry.exists():
-        raise HTTPException(500, f"Streamlit entry not found: {entry}")
-
-    # already running
-    if _is_port_open(STREAMLIT_PORT):
-        return {"ok": True, "already_running": True, "url": f"http://127.0.0.1:{STREAMLIT_PORT}"}
-
-    # start streamlit using current venv python
-    cmd = [
-        sys.executable, "-m", "streamlit", "run", str(entry),
-        "--server.port", str(STREAMLIT_PORT),
-        "--server.headless", "true",
-    ]
-    # --- FIX: ensure optimiser_engine can be imported in the Streamlit subprocess ---
-    env = os.environ.copy()
-    root = str(_engine_root())
-    env["PYTHONPATH"] = root + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
-
-    _streamlit_proc = subprocess.Popen(
-        cmd,
-        cwd=str(_engine_root()),
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    # wait for port to open
-    t0 = time.time()
-    while time.time() - t0 < 4.0:
-        if _is_port_open(STREAMLIT_PORT):
-            return {"ok": True, "already_running": False, "url": f"http://127.0.0.1:{STREAMLIT_PORT}"}
-        time.sleep(0.1)
-
-    raise HTTPException(500, "Streamlit failed to start (port not open).")
-
-
-@app.get("/api/optimiser_ui/status")
-async def optimiser_ui_status():
-    running = _is_port_open(STREAMLIT_PORT)
-    return {"ok": True, "running": running, "url": f"http://127.0.0.1:{STREAMLIT_PORT}"}
-
-
-# 简易会话：token -> {router_base, role, exp}
-SESS: Dict[str, Dict[str, Any]] = {}
-# 简易设置存储：router_id -> dict
-SETTINGS: Dict[str, Dict[str, Any]] = {}
-# 简易历史缓存：router_id -> list[dict]  （真实项目请用SQLite）
-HISTORY: Dict[str, List[Dict[str, Any]]] = {}
-
+# ===================== Helpers =====================
 def make_token() -> str:
     return secrets.token_hex(16)
 
 def now_ts() -> float:
     return time.time()
+
 
 # ========== Proxy 到主程序 server.py（真实数据源） ==========
 SERVER_BASE = os.getenv("OPTIMASOL_SERVER_BASE", "http://127.0.0.1:8000").rstrip("/")
@@ -283,7 +175,91 @@ async def _srv_post(path: str, sess: Dict[str, Any], payload: Dict[str, Any]) ->
         return r.json()
 
 
-# ===================== P01 登录 =====================
+# ===================== Streamlit endpoints =====================
+@app.post("/api/data_ui/start")
+async def data_ui_start():
+    global _data_ui_proc
+    entry = _data_ui_entry()
+    if not entry.exists():
+        raise HTTPException(500, f"Data UI entry not found: {entry}")
+
+    if _is_port_open(DATA_UI_PORT):
+        return {"ok": True, "already_running": True, "url": f"http://127.0.0.1:{DATA_UI_PORT}"}
+
+    cmd = [
+        sys.executable, "-m", "streamlit", "run", str(entry),
+        "--server.port", str(DATA_UI_PORT),
+        "--server.headless", "true",
+    ]
+
+    env = os.environ.copy()
+    data_root = str(entry.parent)
+    env["PYTHONPATH"] = data_root + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+
+    _data_ui_proc = subprocess.Popen(
+        cmd,
+        cwd=str(entry.parent),
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    t0 = time.time()
+    while time.time() - t0 < 4.0:
+        if _is_port_open(DATA_UI_PORT):
+            return {"ok": True, "already_running": False, "url": f"http://127.0.0.1:{DATA_UI_PORT}"}
+        time.sleep(0.1)
+
+    raise HTTPException(500, "Data UI failed to start (port not open).")
+
+@app.get("/api/data_ui/status")
+async def data_ui_status():
+    running = _is_port_open(DATA_UI_PORT)
+    return {"ok": True, "running": running, "url": f"http://127.0.0.1:{DATA_UI_PORT}"}
+
+@app.post("/api/optimiser_ui/start")
+async def optimiser_ui_start():
+    global _streamlit_proc
+    entry = _streamlit_entry()
+    if not entry.exists():
+        raise HTTPException(500, f"Streamlit entry not found: {entry}")
+
+    if _is_port_open(STREAMLIT_PORT):
+        return {"ok": True, "already_running": True, "url": f"http://127.0.0.1:{STREAMLIT_PORT}"}
+
+    cmd = [
+        sys.executable, "-m", "streamlit", "run", str(entry),
+        "--server.port", str(STREAMLIT_PORT),
+        "--server.headless", "true",
+    ]
+
+    env = os.environ.copy()
+    root = str(_engine_root())
+    env["PYTHONPATH"] = root + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+
+    _streamlit_proc = subprocess.Popen(
+        cmd,
+        cwd=str(_engine_root()),
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    t0 = time.time()
+    while time.time() - t0 < 4.0:
+        if _is_port_open(STREAMLIT_PORT):
+            return {"ok": True, "already_running": False, "url": f"http://127.0.0.1:{STREAMLIT_PORT}"}
+        time.sleep(0.1)
+
+    raise HTTPException(500, "Streamlit failed to start (port not open).")
+
+@app.get("/api/optimiser_ui/status")
+async def optimiser_ui_status():
+    running = _is_port_open(STREAMLIT_PORT)
+    return {"ok": True, "running": running, "url": f"http://127.0.0.1:{STREAMLIT_PORT}"}
+
+
+# ===================== Auth =====================
 class LoginIn(BaseModel):
     router_id: str
     password: str
@@ -296,35 +272,32 @@ COOKIE_MAX_AGE = 3600 * 8  # 8小时
 async def login(p: LoginIn, response: Response):
     rid = p.router_id.strip()
 
-   # 1) 优先走主程序 server.py 登录（获取 token）
-server_token = None
-client_id = None
-try:
-    # 注意：server.py 的 /api/login 要求 email 格式
-    # 所以这里如果你的 rid 不是 email，就会 422/400，直接进入 except 回退本地登录
-    res = await _srv_post("/api/login", sess={}, payload={"email": rid, "password": p.password})
-    server_token = res.get("token")
-    client_id = res.get("client_id")
-except Exception:
-    server_token = None
+    # 1) 优先走主程序 server.py 登录（获取 token）
+    server_token: Optional[str] = None
+    client_id: Optional[str] = None
 
-# 2) 如果 server 登录没拿到 token，则回退你原来的本地 users.json 登录
-if not server_token:
-    users = load_users()
-    u = users.get(rid)
-    if not u:
-        raise HTTPException(401, "Bad credentials")
-    if not pwd_context.verify(normalize_password(p.password), u["password_hash"]):
-        raise HTTPException(401, "Bad credentials")
-    role = u.get("role", "user")
-    router_base = u.get("router_base", None)
-else:
-    # server 登录成功：角色先按 user（或你后面从 /api/me 拿）
-    role = "user"
+    try:
+        res = await _srv_post("/api/login", sess={}, payload={"email": rid, "password": p.password})
+        server_token = res.get("token")
+        client_id = res.get("client_id")
+    except Exception:
+        server_token = None
+
+    # 2) 如果 server 登录没拿到 token，则回退本地 users.json 登录
     router_base = None
+    if not server_token:
+        users = load_users()
+        u = users.get(rid)
+        if not u:
+            raise HTTPException(401, "Bad credentials")
+        if not pwd_context.verify(normalize_password(p.password), u["password_hash"]):
+            raise HTTPException(401, "Bad credentials")
 
-    role = u.get("role", "user")
-    router_base = u.get("router_base", None)
+        role = u.get("role", "user")
+        router_base = u.get("router_base", None)
+    else:
+        # server 登录成功：先按 user（你也可以后续通过 /api/me 再细分）
+        role = "user"
 
     token = make_token()
     SESS[token] = {
@@ -335,14 +308,13 @@ else:
         "exp": now_ts() + COOKIE_MAX_AGE,
         "server_token": server_token,
         "client_id": client_id,
-
     }
 
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        secure=False,   # 上线 HTTPS 后改 True
+        secure=False,
         samesite="lax",
         max_age=COOKIE_MAX_AGE,
         path="/",
@@ -358,10 +330,35 @@ def auth(request: Request):
         raise HTTPException(401, "Session expired")
     return sess
 
-# ===================== 工具：抓取设备JSON =====================
+@app.get("/api/auth/me")
+async def me(sess=Depends(auth)):
+    if sess.get("server_token"):
+        try:
+            me_data = await _srv_get("/api/me", sess)
+            return {
+                "router_id": me_data.get("client_id") or sess.get("router_id"),
+                "role": sess.get("role", "user"),
+                "lang": sess.get("lang", "en"),
+                "me_raw": me_data,
+            }
+        except Exception:
+            pass
+
+    return {
+        "router_id": sess.get("router_id"),
+        "role": sess.get("role", "user"),
+        "lang": sess.get("lang", "en"),
+    }
+
+@app.post("/api/auth/logout")
+async def logout(response: Response):
+    response.delete_cookie(COOKIE_NAME, path="/")
+    return {"ok": True}
+
+
+# ===================== Device JSON (router) =====================
 async def fetch_router_json(base: str) -> Dict[str, Any]:
     if not ENABLE_REAL_DEVICE or not base:
-        # 占位数据（可快速联调前端）
         return {
             "PIN": 420, "PROD": 1836, "TEMP1": 52.1, "SAVED_POWER": 2.7,
             "STATUS_OUT1": True, "STATUS_OUT2": False, "MODEINFO": 13,
@@ -380,51 +377,41 @@ async def post_router_cmd(base: str, payload: Dict[str, Any]) -> bool:
         r = await c.post(f"{base}/rest/api", json=payload)
         return r.status_code == 200
 
-@app.get("/api/auth/me")
-async def me(sess=Depends(auth)):
-    # 有 server_token：去主程序 server.py 拿更完整的身份信息
-    if sess.get("server_token"):
-        try:
-            me = await _srv_get("/api/me", sess)
-            # 你前端期望 router_id/role/lang；这里做字段映射
-            return {
-                "router_id": me.get("client_id") or sess.get("router_id"),
-                "role": sess.get("role", "user"),
-                "lang": sess.get("lang", "en"),
-                "me_raw": me,  # 可选：调试用
-            }
-        except Exception:
-            pass
 
-    # 否则回退原逻辑
-    return {
-        "router_id": sess.get("router_id"),
-        "role": sess.get("role", "user"),
-        "lang": sess.get("lang", "en"),
-    }
-
-   
-@app.post("/api/auth/logout")
-async def logout(response: Response):
-    response.delete_cookie(COOKIE_NAME, path="/")
-    return {"ok": True}
-
-
-# ===================== P02 仪表盘：状态 + 预测 =====================
+# ===================== P02 Dashboard =====================
 @app.get("/api/status")
 async def api_status(sess=Depends(auth)):
+    if sess.get("server_token"):
+        s = await _srv_get("/api/summary", sess)
+        temp_latest = (s.get("temperature_latest") or {}).get("temperature")
+        prod_meas = s.get("production_measured_latest") or {}
+        solar_latest = prod_meas.get("power_w")
+
+        return {
+            "grid_w": None,
+            "solar_w": solar_latest,
+            "temp_c": temp_latest,
+            "out1_on": None,
+            "out2_on": None,
+            "modeinfo": None,
+            "predict": {
+                "decision_latest": s.get("decision_latest"),
+                "production_forecast_latest": s.get("production_forecast_latest"),
+            },
+            "updated_at": time.time(),
+        }
+
     j = await fetch_router_json(sess.get("router_base"))
-    # 简单预测占位（真实实现请替换为算法）
     settings = SETTINGS.get(sess["router_id"], {})
     typical = settings.get("typical_shower_time", "07:30")
     next_shower = settings.get("next_shower_time", typical)
-    desired = settings.get("desired_temp_next", 50)
+
     predict = {
         "next_shower": next_shower,
         "expected_temp": j.get("TEMP1", None),
         "solar_enough": bool((j.get("PROD", 0) - j.get("PIN", 0)) > 500),
         "extra_kwh_needed": 0.8,
-        "estimated_cost": 0.18,  # EUR
+        "estimated_cost": 0.18,
         "suggested_schedule": ["15:00-16:00 off-peak", "11:00-12:00 solar"],
     }
     return {
@@ -435,13 +422,13 @@ async def api_status(sess=Depends(auth)):
         "predict": predict,
     }
 
-# ===================== P04 Boost 控制 =====================
+
+# ===================== P04 Boost =====================
 class BoostIn(BaseModel):
     on: bool = True
 
 @app.get("/api/boost")
 async def boost_status(sess=Depends(auth)):
-    # 占位：以 modeinfo 的低位判断
     j = await fetch_router_json(sess.get("router_base"))
     active = (j.get("MODEINFO", 0) % 10) == 3
     return {"active": active}
@@ -449,16 +436,19 @@ async def boost_status(sess=Depends(auth)):
 @app.post("/api/boost")
 async def boost_on(p: BoostIn, sess=Depends(auth)):
     ok = await post_router_cmd(sess.get("router_base"), {"Out1_mode": 3 if p.on else 0})
-    if not ok: raise HTTPException(500, "Boost failed")
+    if not ok:
+        raise HTTPException(500, "Boost failed")
     return {"ok": True}
 
 @app.delete("/api/boost")
 async def boost_off(sess=Depends(auth)):
     ok = await post_router_cmd(sess.get("router_base"), {"Out1_mode": 0})
-    if not ok: raise HTTPException(500, "Cancel Boost failed")
+    if not ok:
+        raise HTTPException(500, "Cancel Boost failed")
     return {"ok": True}
 
-# ===================== P05 设置 =====================
+
+# ===================== P05 Settings =====================
 class SettingsIn(BaseModel):
     typical_shower_time: Optional[str] = None
     next_shower_time: Optional[str] = None
@@ -484,67 +474,51 @@ async def save_settings(p: SettingsIn, sess=Depends(auth)):
     d = SETTINGS.get(sess["router_id"], {})
     d.update({k: v for k, v in p.dict().items() if v is not None})
     SETTINGS[sess["router_id"]] = d
-    # 这里可触发预测模块更新
     return {"ok": True, "settings": d}
 
 
-# ===================== Client（位置 + 光伏参数） =====================
-
+# ===================== Client (proxy to server when available) =====================
 @app.get("/api/client")
 async def get_client(sess=Depends(auth)):
-    """
-    返回当前 router_id 对应的 client 配置（如果不存在则返回 {}）
-    """
+    if sess.get("server_token"):
+        return await _srv_get("/api/client", sess)
     cfg = CLIENTS.get(sess["router_id"])
     return cfg or {}
 
 @app.post("/api/client")
 async def save_client(p: ClientConfigIn, sess=Depends(auth)):
-    """
-    保存/更新当前 router 的 client 配置。
-    目前先保存在内存 dict 里；之后可以在这里调用 MeteoManager.
-    """
+    if sess.get("server_token"):
+        payload = {"client": p.dict()}
+        res = await _srv_post("/api/client", sess, payload)
+        return {"ok": True, "client": res.get("client", res)}
     CLIENTS[sess["router_id"]] = p.dict()
-
-    # TODO （下一步集成 Weather v2.0 的位置）:
-    # from MeteoManager import MeteoManager
-    # from models import Client, Position, Requetes, Features, Installation_PV
-    # manager = MeteoManager(path_bdd=Path("data/meteo_router.sqlite"))
-    # -> 把 p 转换为 Position / Installation_PV / Features / Client
-    # -> manager.client.create_client(client)
-
     return {"ok": True, "client": CLIENTS[sess["router_id"]]}
 
 
-# ===================== P03 历史与导出（占位数据） =====================
-from fastapi import Query
-
+# ===================== History =====================
 @app.get("/api/history")
-async def history(
-    metric: str = "SAVED_Cost",
-    range_: str = Query("7d", alias="range"),
-    sess=Depends(auth)
-):
-    import datetime, random
+async def history(metric: str = "TEMP1", range_: str = Query("7d", alias="range"), sess=Depends(auth)):
+    if sess.get("server_token"):
+        if metric.upper() in ("TEMP1", "TEMPERATURE"):
+            n = 7 if range_ == "7d" else 30
+            data = await _srv_get("/api/history/temperature", sess, params={"limit": n})
+            series = [
+                {"t": r["timestamp"], "v": r["temperature"]}
+                for r in data.get("records", [])
+                if r.get("temperature") is not None
+            ]
+            return {"metric": metric, "range": range_, "series": series}
+        raise HTTPException(400, f"metric '{metric}' not supported by server yet")
 
+    import datetime, random
     n = 7 if range_.endswith("7d") else 30
     base_date = datetime.date.today()
-
     series = []
-    for i in range(n):   # ✅ 这里的 range 是 Python 内置函数了
-        day = (base_date - datetime.timedelta(days=n-1-i)).isoformat()
+    for i in range(n):
+        day = (base_date - datetime.timedelta(days=n - 1 - i)).isoformat()
         val = round(random.uniform(0.1, 2.0), 3)
         series.append({"t": day, "v": val})
-
-    return {
-        "metric": metric,
-        "range": range_,
-        "series": series
-    }
-
-
-
-from fastapi import Query
+    return {"metric": metric, "range": range_, "series": series}
 
 @app.get("/api/history/export.csv")
 async def export_csv(range_: str = Query("30d", alias="range"), sess=Depends(auth)):
@@ -556,12 +530,14 @@ async def export_csv(range_: str = Query("30d", alias="range"), sess=Depends(aut
         w.writerow([p["t"], p["v"]])
     return Response(content=buf.getvalue(), media_type="text/csv")
 
-# ===================== P06 MQTT 状态（占位） =====================
+
+# ===================== MQTT Status =====================
 @app.get("/api/mqtt/status")
 async def mqtt_status(sess=Depends(auth)):
     return MQTT_STATUS
 
-# ===================== P07 开发者调试（可选） =====================
+
+# ===================== Dev Debug =====================
 class CreateUserIn(BaseModel):
     router_id: str
     password: str
@@ -584,7 +560,7 @@ async def dev_create_user(p: CreateUserIn, sess=Depends(auth)):
         raise HTTPException(409, "User already exists")
 
     users[rid] = {
-       "password_hash": pwd_context.hash(normalize_password(p.password)),
+        "password_hash": pwd_context.hash(normalize_password(p.password)),
         "role": p.role or "user",
         "router_base": p.router_base
     }
@@ -593,7 +569,8 @@ async def dev_create_user(p: CreateUserIn, sess=Depends(auth)):
 
 @app.get("/api/dev/routers")
 async def dev_list(sess=Depends(auth)):
-    if sess["role"] != "dev": raise HTTPException(403, "Forbidden")
+    if sess["role"] != "dev":
+        raise HTTPException(403, "Forbidden")
     rows = [{"router_id": k, "router_base": v} for k, v in ROUTER_MAP.items()]
     return {"routers": rows}
 
@@ -603,10 +580,14 @@ class DevCmdIn(BaseModel):
 
 @app.post("/api/dev/cmd")
 async def dev_cmd(p: DevCmdIn, sess=Depends(auth)):
-    if sess["role"] != "dev": raise HTTPException(403, "Forbidden")
+    if sess["role"] != "dev":
+        raise HTTPException(403, "Forbidden")
     base = ROUTER_MAP.get(p.router_id)
-    if not base: raise HTTPException(404, "Router not found")
+    if not base:
+        raise HTTPException(404, "Router not found")
     ok = await post_router_cmd(base, p.cmd)
     return {"ok": ok}
 
+
+# ===================== Static =====================
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
